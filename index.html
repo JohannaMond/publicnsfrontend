@@ -3,185 +3,176 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Der Notrufsimulator</title>
+  <title>Notrufsimulator</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 20px;
+      font-family: Arial, sans-serif;
+      background-color: #f6f8fa;
       color: #333;
-    }
-    .container {
-      max-width: 600px;
+      padding: 20px;
+      max-width: 700px;
       margin: auto;
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     h1 {
       color: #c0392b;
-      margin-bottom: 0;
     }
-    h2 {
-      color: #2980b9;
-      margin-top: 5px;
-      font-weight: normal;
-    }
-    input, select, textarea, button {
+    label, input, select, button, textarea {
+      display: block;
       width: 100%;
       margin-top: 10px;
-      margin-bottom: 20px;
-      padding: 10px;
       font-size: 1rem;
     }
-    #startButton, #downloadButton {
-      background-color: #c0392b;
+    button {
+      background-color: #2980b9;
       color: white;
+      padding: 10px;
       border: none;
       cursor: pointer;
+      margin-top: 15px;
     }
-    #downloadButton {
+    button:hover {
+      background-color: #1c5980;
+    }
+    #transcriptDisplay {
+      margin-top: 20px;
+      background-color: #eee;
+      padding: 15px;
       display: none;
     }
-    #transcript {
-      background: #eee;
-      padding: 15px;
-      white-space: pre-wrap;
-      border-radius: 5px;
-      margin-top: 20px;
-    }
-    .hidden {
+    #callAudio {
       display: none;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Der Notrufsimulator</h1>
-    <h2>KI-basiertes Training für Notrufdienste</h2>
+  <h1>Der Notrufsimulator</h1>
+  <p>KI-basiertes Training für Notrufdienste</p>
 
-    <div id="loginSection">
-      <input type="password" id="passwordInput" placeholder="Passwort eingeben" />
-      <button onclick="login()">Login</button>
-    </div>
-
-    <div id="formSection" class="hidden">
-      <input type="text" id="nameInput" placeholder="Dein Name" />
-      <input type="number" id="ageInput" placeholder="Dein Alter" />
-
-      <label>Geschlecht der anrufenden Person</label>
-      <select id="genderSelect">
-        <option>zufall</option>
-        <option>männlich</option>
-        <option>weiblich</option>
-      </select>
-
-      <label>Alter der anrufenden Person</label>
-      <select id="callerAgeSelect">
-        <option>zufall</option>
-        <option>minderjährig unter 13</option>
-        <option>erwachsen 13-65</option>
-        <option>senior über 65</option>
-      </select>
-
-      <label>Einsatzart</label>
-      <select id="typeSelect">
-        <option>zufall</option>
-        <option>Feuerwehr</option>
-        <option>Rettungsdienst</option>
-        <option>Verkehrsunfall</option>
-      </select>
-
-      <label>Einsatzort</label>
-      <input type="text" id="locationInput" placeholder="z. B. Schule, Spielplatz..." />
-
-      <label>Zusätzliche Hinweise (optional)</label>
-      <textarea id="notesInput" placeholder="z. B. besondere Fallideen, emotionale Lage..."></textarea>
-
-      <button id="startButton" onclick="startCall()">Simulation starten</button>
-    </div>
-
-    <div id="transcript" class="hidden"></div>
-    <button id="downloadButton" onclick="downloadTranscript()">Download Transkript</button>
+  <div id="loginSection">
+    <label for="passwordInput">Passwort eingeben:</label>
+    <input type="password" id="passwordInput" />
+    <button onclick="login()">Login</button>
+    <p id="loginMessage" style="color:red;"></p>
   </div>
 
-<script>
-const API_BASE = "https://backendns.onrender.com"; // <- meine Backend-URL
-let sessionId = null;
-let transcript = "";
+  <div id="detailsSection" style="display:none;">
+    <label for="nameInput">Dein Name:</label>
+    <input type="text" id="nameInput" />
+    
+    <label for="ageInput">Dein Alter:</label>
+    <input type="number" id="ageInput" />
 
-function login() {
-  const password = document.getElementById("passwordInput").value;
+    <label for="gender">Geschlecht (Anrufer):</label>
+    <select id="gender">
+      <option value="zufall">Zufall</option>
+      <option value="männlich">Männlich</option>
+      <option value="weiblich">Weiblich</option>
+    </select>
 
-  fetch(API_BASE + "/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password }),
-  })
-    .then((res) => {
-      if (!res.ok) throw new Error("Falsches Passwort");
-      return res.json();
-    })
-    .then(() => {
-      document.getElementById("login").style.display = "none";
-      document.getElementById("userForm").style.display = "block";
-    })
-    .catch((err) => {
-      alert("❌ " + err.message);
-    });
-}
+    <label for="callerAge">Alter (Anrufer):</label>
+    <select id="callerAge">
+      <option value="zufall">Zufall</option>
+      <option value="kind">Kind unter 13</option>
+      <option value="erwachsen">Erwachsen (13–65)</option>
+      <option value="senior">Senior (über 65)</option>
+    </select>
 
-function startCall() {
-  const name = document.getElementById("nameInput").value;
-  const age = parseInt(document.getElementById("ageInput").value);
-  const scenario = {
-    gender: document.getElementById("genderSelect").value,
-    callerAge: document.getElementById("callerAgeSelect").value,
-    emergencyType: document.getElementById("typeSelect").value,
-    location: document.getElementById("locationInput").value,
-    notes: document.getElementById("notesInput").value,
-  };
+    <label for="type">Einsatzart:</label>
+    <select id="type">
+      <option value="zufall">Zufall</option>
+      <option value="feuerwehr">Feuerwehr</option>
+      <option value="rettungsdienst">Rettungsdienst</option>
+      <option value="verkehrsunfall">Verkehrsunfall</option>
+    </select>
 
-  fetch(API_BASE + "/api/start", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, age, scenario }),
-  })
-  .then(res => res.json())
-  .then(data => {
-    sessionId = data.sessionId;
-    transcript = `📞 Simulation gestartet für ${name} (${age} Jahre):\n\n`;
-    document.getElementById("transcript").classList.remove("hidden");
-    document.getElementById("transcript").textContent = transcript;
-    askNext();
-  });
-}
+    <label for="location">Einsatzort (frei wählbar):</label>
+    <input type="text" id="location" placeholder="z.B. Schulhof, Wohnung, Autobahn..." />
 
-function askNext() {
-  const userMessage = prompt("Was möchtest du sagen?");
-  if (!userMessage) return;
+    <label for="extra">Weitere Vorgaben / Ideen:</label>
+    <textarea id="extra" placeholder="Optional – z.B. Kind schreit im Hintergrund, schlechte Verbindung, etc."></textarea>
 
-  transcript += "Einsatzkraft: " + userMessage + "\n";
-  document.getElementById("transcript").textContent = transcript;
+    <button onclick="startSimulation()">Simulation starten</button>
+  </div>
 
-  fetch(API_BASE + "/api/message", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: userMessage, sessionId }),
-  })
-  .then(res => res.json())
-  .then(data => {
-    transcript += "Anrufer: " + data.reply + "\n\n";
-    document.getElementById("transcript").textContent = transcript;
-    setTimeout(askNext, 500);
-  });
-}
+  <div id="callSection" style="display:none;">
+    <p><strong>Simulation läuft...</strong></p>
+    <button onclick="acceptCall()">Anruf annehmen</button>
+    <button onclick="endCall()">Beenden & Transkript herunterladen</button>
+    <audio id="callAudio" src="klingelton.mp3" autoplay></audio>
+    <div id="transcriptDisplay"></div>
+  </div>
 
-function downloadTranscript() {
-  window.location.href = API_BASE + "/api/export/" + sessionId;
-}
-</script>
+  <script>
+    const API_BASE = "https://backendns.onrender.com";
+    let sessionId = null;
+
+    function login() {
+      const password = document.getElementById("passwordInput").value;
+      fetch(API_BASE + "/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById("loginSection").style.display = "none";
+          document.getElementById("detailsSection").style.display = "block";
+        } else {
+          document.getElementById("loginMessage").innerText = "❌ Falsches Passwort.";
+        }
+      });
+    }
+
+    function startSimulation() {
+      const name = document.getElementById("nameInput").value;
+      const age = document.getElementById("ageInput").value;
+      const scenario = {
+        gender: document.getElementById("gender").value,
+        callerAge: document.getElementById("callerAge").value,
+        type: document.getElementById("type").value,
+        location: document.getElementById("location").value,
+        extra: document.getElementById("extra").value,
+      };
+
+      fetch(API_BASE + "/api/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, age, scenario })
+      })
+      .then(res => res.json())
+      .then(data => {
+        sessionId = data.sessionId;
+        document.getElementById("detailsSection").style.display = "none";
+        document.getElementById("callSection").style.display = "block";
+        document.getElementById("callAudio").play();
+      });
+    }
+
+    function acceptCall() {
+      fetch(API_BASE + "/api/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId })
+      });
+      // Spracheingabe/Ausgabe starten (falls integriert)
+    }
+
+    function endCall() {
+      fetch(API_BASE + "/api/end", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId })
+      })
+      .then(res => res.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "notruf_transkript.txt";
+        a.click();
+      });
+    }
+  </script>
 </body>
 </html>
