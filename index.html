@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Der Notrufsimulator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #c0392b;
+      margin-bottom: 0;
+    }
+    h2 {
+      color: #2980b9;
+      margin-top: 5px;
+      font-weight: normal;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      padding: 10px;
+      font-size: 1rem;
+    }
+    #startButton, #downloadButton {
+      background-color: #c0392b;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    #downloadButton {
+      display: none;
+    }
+    #transcript {
+      background: #eee;
+      padding: 15px;
+      white-space: pre-wrap;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Der Notrufsimulator</h1>
+    <h2>KI-basiertes Training für Notrufdienste</h2>
+
+    <div id="loginSection">
+      <input type="password" id="passwordInput" placeholder="Passwort eingeben" />
+      <button onclick="login()">Login</button>
+    </div>
+
+    <div id="formSection" class="hidden">
+      <input type="text" id="nameInput" placeholder="Dein Name" />
+      <input type="number" id="ageInput" placeholder="Dein Alter" />
+
+      <label>Geschlecht der anrufenden Person</label>
+      <select id="genderSelect">
+        <option>zufall</option>
+        <option>männlich</option>
+        <option>weiblich</option>
+      </select>
+
+      <label>Alter der anrufenden Person</label>
+      <select id="callerAgeSelect">
+        <option>zufall</option>
+        <option>minderjährig unter 13</option>
+        <option>erwachsen 13-65</option>
+        <option>senior über 65</option>
+      </select>
+
+      <label>Einsatzart</label>
+      <select id="typeSelect">
+        <option>zufall</option>
+        <option>Feuerwehr</option>
+        <option>Rettungsdienst</option>
+        <option>Verkehrsunfall</option>
+      </select>
+
+      <label>Einsatzort</label>
+      <input type="text" id="locationInput" placeholder="z. B. Schule, Spielplatz..." />
+
+      <label>Zusätzliche Hinweise (optional)</label>
+      <textarea id="notesInput" placeholder="z. B. besondere Fallideen, emotionale Lage..."></textarea>
+
+      <button id="startButton" onclick="startCall()">Simulation starten</button>
+    </div>
+
+    <div id="transcript" class="hidden"></div>
+    <button id="downloadButton" onclick="downloadTranscript()">Download Transkript</button>
+  </div>
+
+<script>
+const API_BASE = "https://notrufsimulator.onrender.com"; // <- deine Backend-URL
+let sessionId = null;
+let transcript = "";
+
+function login() {
+  const password = document.getElementById("passwordInput").value;
+  fetch(API_BASE + "/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById("loginSection").classList.add("hidden");
+      document.getElementById("formSection").classList.remove("hidden");
+    } else {
+      alert("Falsches Passwort");
+    }
+  });
+}
+
+function startCall() {
+  const name = document.getElementById("nameInput").value;
+  const age = parseInt(document.getElementById("ageInput").value);
+  const scenario = {
+    gender: document.getElementById("genderSelect").value,
+    callerAge: document.getElementById("callerAgeSelect").value,
+    emergencyType: document.getElementById("typeSelect").value,
+    location: document.getElementById("locationInput").value,
+    notes: document.getElementById("notesInput").value,
+  };
+
+  fetch(API_BASE + "/api/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, age, scenario }),
+  })
+  .then(res => res.json())
+  .then(data => {
+    sessionId = data.sessionId;
+    transcript = `📞 Simulation gestartet für ${name} (${age} Jahre):\n\n`;
+    document.getElementById("transcript").classList.remove("hidden");
+    document.getElementById("transcript").textContent = transcript;
+    askNext();
+  });
+}
+
+function askNext() {
+  const userMessage = prompt("Was möchtest du sagen?");
+  if (!userMessage) return;
+
+  transcript += "Einsatzkraft: " + userMessage + "\n";
+  document.getElementById("transcript").textContent = transcript;
+
+  fetch(API_BASE + "/api/message", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: userMessage, sessionId }),
+  })
+  .then(res => res.json())
+  .then(data => {
+    transcript += "Anrufer: " + data.reply + "\n\n";
+    document.getElementById("transcript").textContent = transcript;
+    setTimeout(askNext, 500);
+  });
+}
+
+function downloadTranscript() {
+  window.location.href = API_BASE + "/api/export/" + sessionId;
+}
+</script>
+</body>
+</html>
