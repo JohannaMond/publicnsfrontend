@@ -114,20 +114,23 @@ let transcript = "";
 
 function login() {
   const password = document.getElementById("passwordInput").value;
+
   fetch(API_BASE + "/api/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ password }),
   })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      document.getElementById("loginSection").classList.add("hidden");
-      document.getElementById("formSection").classList.remove("hidden");
-    } else {
-      alert("Falsches Passwort");
-    }
-  });
+    .then((res) => {
+      if (!res.ok) throw new Error("Falsches Passwort");
+      return res.json();
+    })
+    .then(() => {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("userForm").style.display = "block";
+    })
+    .catch((err) => {
+      alert("❌ " + err.message);
+    });
 }
 
 function startCall() {
